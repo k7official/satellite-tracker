@@ -53,8 +53,12 @@ router.post('/add', (req, res) => {
         lng : parseFloat((geo.longitude * 180 / Math.PI).toFixed(4)),
         alt_km : parseFloat((geo.height).toFixed(2)),
         speed_kms : 7.5, // approximate speed of LEO satellites in km/s.
-        type : "payload"
+        type : "payload",
+        tle1: tle_line1, 
+        tle2: tle_line2
     }
+
+    // const newSat = propagateLocation(tle_line1, tle_line2, `CUSTOM-${satrec.satnum}`, String(satrec.satnum));
 
     addSatellite(newSat); // add new satellite to live list of satellites.
     const allObjects = getSatellites(); // get the updated list.

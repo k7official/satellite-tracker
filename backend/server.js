@@ -5,6 +5,8 @@ const axios = require('axios');
 const cron = require('node-cron'); // For the 90-second refresh [cite: 147]
 const { getSatellites, setSatellites, propagateLocation } = require('./satellites');
 const mockData = require('./mock_data.json');
+const { detectCollisions } = require('./collision');
+const { kesslerScore } = require('./utils/riskScore'); // Risk utility
 
 const app = express();
 const PORT = 3000;
@@ -16,6 +18,9 @@ const SP_PASS = process.env.SP_PASS;
 // Middleware
 app.use(cors()); // [cite: 147]
 app.use(express.json()); // [cite: 147]
+// Mount the BE-2 satellite management routes
+const satelliteRoutes = require('./routes/satellite'); // Adjust path if needed
+app.use('/api/satellite', satelliteRoutes);
 
 /**
  * BE-1: Core Fetching Logic
@@ -100,10 +105,15 @@ fetchTles();
 setInterval(() => {
     const currentSats = getSatellites();
     if (currentSats.length > 0) {
-        const updatedSats = currentSats.map(s => 
-            propagateLocation(s.tle1, s.tle2, s.name, s.id)
-        );
+        const updatedSats = currentSats.map(s => {
+            // Safety check: Only propagate if TLE data exists
+            if (s.tle1 && s.tle2) {
+                return propagateLocation(s.tle1, s.tle2, s.name, s.id);
+            }
+            return s; // Keep it as is if no TLE (it just won't move)
+        });
         setSatellites(updatedSats);
+        //console.log("BE-2 sees satellite count:", getSatellites().length);
         // console.log("Positions propagated for current time.");
     }
 }, 5000); // 5 seconds
@@ -114,18 +124,32 @@ setInterval(() => {
  * Returns live data from BE-1 (satellites) and eventually BE-2 (collisions)[cite: 27, 31].
  */
 app.get('/api/data', (req, res) => {
-    const liveSatellites = getSatellites();
+    const allObjects = getSatellites();
+    console.log(allObjects);
     
-    // If live data isn't ready yet, fallback to mock to keep FE unblocked 
-    if (liveSatellites.length === 0) {
+    if (allObjects.length === 0) {
         return res.json(mockData);
     }
 
+    // BE-2 : Integration: Split objects into Satellites and Debris
+    // Typically, TLE names with "DEB", "R/B", or "COOLANT" are debris
+    const debris = allObjects.filter(s => 
+        s.name.includes("DEB") || 
+        s.name.includes("R/B") || 
+        s.name.includes("COOLANT")
+    );
+    
+    const activeSatellites = allObjects.filter(s => !debris.includes(s));
+
+    // BE-2 Integration: Run the collision detection algorithm
+    const collisions = detectCollisions(allObjects);
+
     res.json({
-        satellites: liveSatellites,
-        debris: [], // Placeholder for BE-2's debris array [cite: 31, 39]
-        collisions: [], // Placeholder for BE-2's logic [cite: 31, 40]
-        last_updated: new Date().toISOString() // [cite: 31, 42]
+        satellites: activeSatellites,
+        debris: debris, 
+        collisions: collisions,
+        risk_assessment: kesslerScore(allObjects), // Optional: include the Kessler score
+        last_updated: new Date().toISOString()
     });
 });
 

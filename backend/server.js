@@ -7,7 +7,6 @@ const { getSatellites, setSatellites, propagateLocation } = require('./satellite
 const mockData = require('./mock_data.json');
 const { detectCollisions } = require('./collision');
 const { kesslerScore } = require('./utils/riskScore'); // Risk utility
-
 const app = express();
 const PORT = 3000;
 

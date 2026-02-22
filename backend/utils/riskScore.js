@@ -5,7 +5,7 @@ const { detectCollisions } = require('../collision');
 function kesslerScore(objects) {
   const total = objects.length;
   const collisions = detectCollisions(objects);
-  const highRisk = collisions.filter(c => c.risk === "HIGH").length;
+  const highRisk = collisions.filter(c => c.risk === "High Risk").length;
 
   const score = Math.min(100, Math.round((highRisk / total) * 10000));
 

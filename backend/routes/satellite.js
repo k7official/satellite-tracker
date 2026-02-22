@@ -72,7 +72,7 @@ router.post('/add', (req, res) => {
         added: newSat,
         satellites: allObjects,
         new_collisions: newCollisions,
-        // kessler: kesslerScore(allObjects),  // { score: 43, label: "ELEVATED" }
+        kessler: kesslerScore(allObjects),  // { score: 43, label: "ELEVATED" }
         last_updated: now.toISOString()
     });
 });
@@ -117,7 +117,7 @@ router.delete('/:id', (req, res) => {
     },
     satellites: after,
     collisions: collisionsAfter,
-    // kessler: kesslerScore(after),
+    kessler: kesslerScore(after),
     last_updated: new Date().toISOString()
   });
 });
